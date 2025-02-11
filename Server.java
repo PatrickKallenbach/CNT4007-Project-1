@@ -10,8 +10,7 @@ public class Server {
 	int sPort = 8000;    //The server will be listening on this port number
 	ServerSocket sSocket;   //serversocket used to lisen on port number 8000
 	Socket connection = null; //socket for the connection with the client
-	String message;    //message received from the client
-	String MESSAGE;    //uppercase message send to the client
+	String request;                //User request (get, upload)
 	ObjectOutputStream out;  //stream write to the socket
 	ObjectInputStream in;    //stream read from the socket
 
@@ -31,9 +30,39 @@ public class Server {
 			out = new ObjectOutputStream(connection.getOutputStream());
 			out.flush();
 			in = new ObjectInputStream(connection.getInputStream());
-			// try{
+			try{
 				while(true)
 				{
+					// Read message from client
+					request = (String)in.readObject();
+
+					// Split input into at most two parts, command and filename
+					String[] args = request.split(" ", 2);
+					String command = args[0];
+					String filename = args[1];
+
+					String confirm;
+
+					// cases for different commands
+					switch (command) {
+						case "GET":
+							System.out.println("Sending file to client!!! " + filename);
+							
+							sendMessage("DONE");
+							
+							break;
+						case "UPLOAD":
+							sendMessage("OK");
+
+							System.out.println("Uploading file to server: " + filename);
+
+							confirm = (String)in.readObject();
+
+							sendMessage("OK");
+
+							break;
+					}
+
 					//receive the message sent from the client
 
 					// confirm instruction: get or upload
@@ -48,10 +77,10 @@ public class Server {
 						// request missing files when receiving "done" message
 					
 				}
-			// }
-			// catch(ClassNotFoundException classnot){
-			// 		System.err.println("Data received in unknown format");
-			// 	}
+			}
+			catch(ClassNotFoundException classnot){
+					System.err.println("Data received in unknown format");
+				}
 		}
 		catch(IOException ioException){
 			ioException.printStackTrace();

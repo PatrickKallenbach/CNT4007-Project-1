@@ -35,41 +35,72 @@ public class Client {
 
 				// Split input into at most two parts, command and filename
 				String[] args = request.split(" ", 2);
-				String command = args[0];
-				String filename = args[1];
 
-				switch (command) {
-					case "get":
-						System.out.println("GETTING FILE " + filename);
-						break;
-					case "upload":
-						System.out.println("UPLOADING FILE " + filename);
-						break;
-					default:
-						System.out.println("Unknown request: " + command);
+				// Check input length
+				if (args.length == 1) {
+					System.out.println("Unknown request. Please use \"get <filename>\" or \"upload <filename>\"");
 				}
-				
-				// Implement get and upload functions
-					// send message with get or upload command, wait for response before continuing
-						// get: send request message to server with file name, wait for response
-						// upload: send request message to server, wait for response
+				else {
+					// Break input line into arguments
+					String command = args[0];
+					String filename = args[1];
 
-				// upload command: Add file to the server
-					// loop through file and break into packets
-					// store packets in dictionary, map, something like that
-					// transfer packets one by one
-						// send packets containing length and progress of message as header
-				// get command: retrieve file from server
-					// receive all packets sorting by position
-					// if any are missing, request them at the end and insert
-			}
+					String confirm;
+
+					// Define cases for different commands
+					switch (command) {
+						case "get":
+							System.out.println("GETTING FILE " + filename);
+
+							sendMessage("GET " + filename);
+
+							// get command: retrieve file from server
+								// receive all packets sorting by position
+								// if any are missing, request them at the end and insert
+
+							
+							confirm = (String)in.readObject();
+							System.out.println("File received.");
+
+							break;
+						case "upload":
+							System.out.println("UPLOADING FILE " + filename);
+
+							sendMessage("UPLOAD " + filename);
+
+							confirm = (String)in.readObject();
+
+							sendMessage("DONE");
+							
+							// upload command: Add file to the server
+								// loop through file and break into packets
+								// store packets in dictionary, map, something like that
+								// transfer packets one by one
+									// send packets containing length and progress of message as header
+						
+									
+							confirm = (String)in.readObject();
+							System.out.println("File uploaded.");
+
+							break;
+						default:
+							System.out.println("Unknown request. Please use \"get <filename>\" or \"upload <filename>\"");
+					}
+					
+					// Implement get and upload functions
+						// send message with get or upload command, wait for response before continuing
+							// get: send request message to server with file name, wait for response
+							// upload: send request message to server, wait for response
+
+					}
+				}
 		}
 		catch (ConnectException e) {
     			System.err.println("Connection refused. You need to initiate a server first.");
 		} 
-		// catch ( ClassNotFoundException e ) {
-        //     		System.err.println("Class not found");
-        // 	} 
+		catch ( ClassNotFoundException e ) {
+            		System.err.println("Class not found");
+        	} 
 		catch(UnknownHostException unknownHost){
 			System.err.println("You are trying to connect to an unknown host!");
 		}
