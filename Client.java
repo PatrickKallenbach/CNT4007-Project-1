@@ -26,25 +26,29 @@ public class Client {
 			
 			//get Input from standard input
 			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
+
+			// Implement get and upload functions
+				// send message with get or upload command, wait for response before continuing
+
 			while(true)
 			{
-				System.out.print("Hello, please input a sentence: ");
+				System.out.print("Please input name of file you want to import: ");
 				//read a sentence from the standard input
 				message = bufferedReader.readLine();
-				//Send the sentence to the server
-				sendMessage(message);
-				//Receive the upperCase sentence from the server
-				MESSAGE = (String)in.readObject();
-				//show the message to the user
-				System.out.println("Receive message: " + MESSAGE);
+
+				// Add file to the server
+					// loop through file and break into packets
+					// store packets in dictionary, map, something like that
+					// transfer packets one by one
+						// send packets containing length and progress of message as header
 			}
 		}
 		catch (ConnectException e) {
     			System.err.println("Connection refused. You need to initiate a server first.");
 		} 
-		catch ( ClassNotFoundException e ) {
-            		System.err.println("Class not found");
-        	} 
+		// catch ( ClassNotFoundException e ) {
+        //     		System.err.println("Class not found");
+        // 	} 
 		catch(UnknownHostException unknownHost){
 			System.err.println("You are trying to connect to an unknown host!");
 		}

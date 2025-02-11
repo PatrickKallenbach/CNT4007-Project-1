@@ -33,13 +33,18 @@ public class Server {
 				while(true)
 				{
 					//receive the message sent from the client
-					message = (String)in.readObject();
-					//show the message to the user
-					System.out.println("Receive message: " + message);
-					//Capitalize all letters in the message
-					MESSAGE = message.toUpperCase();
-					//send MESSAGE back to the client
-					sendMessage(MESSAGE);
+
+					// confirm instruction: get or upload
+						// get: find data in map storage with filename key and retrieve
+						// upload: create new entry in map and begin receiving files
+
+					// get: send stored packets one by one across
+						// send "done" message to confirm file is finished sending
+						// if any requests for missing packets are returned, send each missing packet again
+
+					// upload: receive packets one by one and add to server database
+						// request missing files when receiving "done" message
+					
 				}
 			}
 			catch(ClassNotFoundException classnot){
