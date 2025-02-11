@@ -4,6 +4,8 @@ import java.nio.*;
 import java.nio.channels.*;
 import java.util.*;
 
+// Patrick Kallenbach - CNT4007 Project 1
+
 public class Server {
 	int sPort = 8000;    //The server will be listening on this port number
 	ServerSocket sSocket;   //serversocket used to lisen on port number 8000
@@ -29,7 +31,7 @@ public class Server {
 			out = new ObjectOutputStream(connection.getOutputStream());
 			out.flush();
 			in = new ObjectInputStream(connection.getInputStream());
-			try{
+			// try{
 				while(true)
 				{
 					//receive the message sent from the client
@@ -46,10 +48,10 @@ public class Server {
 						// request missing files when receiving "done" message
 					
 				}
-			}
-			catch(ClassNotFoundException classnot){
-					System.err.println("Data received in unknown format");
-				}
+			// }
+			// catch(ClassNotFoundException classnot){
+			// 		System.err.println("Data received in unknown format");
+			// 	}
 		}
 		catch(IOException ioException){
 			ioException.printStackTrace();
