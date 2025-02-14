@@ -13,6 +13,8 @@ public class Client {
 	ObjectOutputStream out;         //stream write to the socket
  	ObjectInputStream in;          //stream read from the socket
 	String request;                //User request (get, upload)
+	
+	int packetSize = 1000;
 
 	public void Client() {}
 
@@ -46,34 +48,111 @@ public class Client {
 					// Break input line into arguments
 					String command = args[0];
 					String filename = args[1];
-
-					String confirm;
+					
+					SortedMap<Long, byte[]> storedFile = new TreeMap<>();
 
 					// Define cases for different commands
 					switch (command) {
 						case "get":
-							System.out.println("GETTING FILE " + filename);
-
 							sendMessage("GET " + filename);
-
-							// get command: retrieve file from server
-								// receive all packets sorting by position
-								// if any are missing, request them at the end and insert
-
 							
-							confirm = (String)in.readObject();
-							System.out.println("File received.");
+							// run set to false when file is fully received
+							boolean run = true;
+
+							while (run) {
+								// prepare receiving message
+								Object message;
+								message = in.readObject();
+
+								// get total file length from within loop
+								long totalLength = -1;
+
+								while (message instanceof byte[]) {
+									// load packet buffer
+									ByteBuffer packetBuffer = ByteBuffer.wrap((byte[])message);
+
+									// get current packet number and total number of packets
+									long packetNumber = packetBuffer.getLong();
+									if (totalLength != -1) totalLength = packetBuffer.getLong();
+									
+									// place packet in storage map
+									storedFile.put(packetNumber, (byte[])message);
+									
+									// listen for new message
+									message = in.readObject();
+								}
+								
+								// prepare list of missing packets to report to client
+								List<Long> missedPackets = new ArrayList<>();
+
+								// add all missing packets reported from storage into array
+								for (long i = 0; i < totalLength; i++) {
+									if (!storedFile.containsKey(i)) {
+										missedPackets.add(i);
+									}
+								}
+
+								// If there are missing packets in the map
+								if (!missedPackets.isEmpty()) {
+									// Prepare byte buffer of packet ids
+									ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES * missedPackets.size());
+									for (Long value : missedPackets) {
+										buffer.putLong(value);
+									}
+									buffer.flip();
+
+									// send missing packets to server
+									out.writeObject(buffer.array());
+									out.flush();
+								}
+								else { // if no missing packets in file
+									run = false;
+									sendMessage("OK"); // report full reception of file to server
+								}
+							}
+							System.out.println("Downloading file: " + filename);
+
+							// Create file to write new content to
+							FileOutputStream outfile = new FileOutputStream("newDownloadTestFile.pptx");
+
+							int lastPercentage = 0; // used for displaying percentage downloaded
+
+							// For each entry now held in storedFile, write to outfile
+							for (SortedMap.Entry<Long, byte[]> receivePacket : storedFile.entrySet()) {
+
+								// Create new bytebuffer with information from each packet
+								ByteBuffer receiveData = ByteBuffer.wrap(receivePacket.getValue());
+								long packetNumber = receiveData.getLong();
+								long totalPackets = receiveData.getLong();
+								int packetLength = (int)receiveData.getLong(); // important value from buffer, determines packet length
+
+								// Prepare array to write to file
+								byte[] writeOut = new byte[packetLength];
+								receiveData.get(writeOut, 0, packetLength);
+
+								// write character by character to outfile
+								for (byte character : writeOut) {
+									outfile.write(character);
+								}
+
+								float progress = packetNumber * 20 / totalPackets;
+								if (Math.floor(progress) != lastPercentage) {
+									System.out.println("Download " + (int)(progress * 5) + "% complete.");
+									lastPercentage = (int)Math.floor(progress);
+								}
+							}
+
+							System.out.println("Finished downloading " + filename + ".");
+							
+							// close output file
+							outfile.close();
 
 							break;
 						case "upload":
 							System.out.println("UPLOADING FILE " + filename);
 
-							int packetSize = 1000;
-
 							sendMessage("UPLOAD " + filename);
-							confirm = (String)in.readObject();
-
-							SortedMap<Long, byte[]> storedFile = new TreeMap<>();
+							String confirm = (String)in.readObject();
 
 							// Prepare input file
 							FileInputStream infile = new FileInputStream(filename);
@@ -152,6 +231,7 @@ public class Client {
 
 							}
 									
+							confirm = (String)in.readObject();
 							System.out.println("File uploaded.");
 							
 							out.flush();

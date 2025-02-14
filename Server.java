@@ -14,7 +14,9 @@ public class Server {
 	ObjectOutputStream out;  //stream write to the socket
 	ObjectInputStream in;    //stream read from the socket
 
-    	public void Server() {}
+	int packetSize = 1000;
+
+    public void Server() {}
 
 	void run()
 	{
@@ -42,16 +44,92 @@ public class Server {
 					String filename = args[1];
 
 					SortedMap<Long, byte[]> storedFile = new TreeMap<>();
-
-					String confirm = "";
+					Object message;
 
 					// cases for different commands
 					switch (command) {
 						case "GET":
-							System.out.println("Sending file to client!!! " + filename);
-							
+							// Prepare input file
+							FileInputStream infile = new FileInputStream(filename);
+
+							// Prepare tracking values
+							long track = 0;
+							long fileLength = infile.getChannel().size();
+							long remainingFileLength = fileLength;
+
+							while (remainingFileLength > 0) {
+								// Define Header information
+									// (Packet #, Total Packet #, Packet Length)
+								ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES*3); // Create a 24-byte buffer
+								
+								// Place tracking values in header
+								buffer.putLong(track);
+								buffer.putLong(fileLength / packetSize);
+								buffer.putLong(Math.min(packetSize, remainingFileLength));
+								buffer.flip(); // Flip to read header in correct order
+
+								byte[] header = buffer.array();
+
+								// Read data into temporary storage
+								byte[] data = new byte[packetSize];
+								infile.read(data);
+
+								// Write header and data into packet
+								byte[] packet = new byte[packetSize + 24];
+
+								// Copy header and data to packet
+								System.arraycopy(header, 0, packet, 0, 24);
+								System.arraycopy(data, 0, packet, 24, packetSize);
+
+								// Insert packet into storedFile map
+								storedFile.put(track, packet);
+
+								// update tracking counters
+								track += 1;
+								remainingFileLength -= packetSize;
+							}
+
+							// Send all values to server
+							for (SortedMap.Entry<Long, byte[]> sendPacket : storedFile.entrySet()) {
+								out.writeObject(sendPacket.getValue());
+								out.flush();
+							}
+							// Send completion message to alert server of complete transfer
 							sendMessage("DONE");
+
+							// CHECK FOR MISSING PACKETS
+
+							// Receive message, either containes "OK" or list of missing packets
+							message = in.readObject();
+
+							// If message is not "OK"
+							while (!(message instanceof String)) {
+								// Store input as byte buffer and prepare long list
+								ByteBuffer missingPacketsBuffer = ByteBuffer.wrap((byte[])message);
+								List<Long> missingPackets = new ArrayList<>();
+
+								// Load long list with long ints
+								while (missingPacketsBuffer.hasRemaining()) {
+									missingPackets.add(missingPacketsBuffer.getLong());
+								}
+
+								// send missing packets again
+								for (long index : missingPackets) {
+									out.writeObject(storedFile.get(index));
+									out.flush();
+								}
+								// send new completion message when all missing packets are sent
+								sendMessage("DONE");
+
+								// listen again for missing packets or completion message
+								message = in.readObject();
+
+							}
+									
+							System.out.println("File sent to client.");
 							
+							out.flush();
+
 							break;
 						case "UPLOAD":
 							sendMessage("OK");
@@ -61,7 +139,6 @@ public class Server {
 
 							while (run) {
 								// prepare receiving message
-								Object message;
 								message = in.readObject();
 
 								// get total file length from within loop
@@ -115,6 +192,8 @@ public class Server {
 							// Create file to write new content to
 							FileOutputStream outfile = new FileOutputStream("newUploadTestFile.pptx");
 
+							int lastPercentage = 0; // used for displaying percentage uploaded
+
 							// For each entry now held in storedFile, write to outfile
 							for (SortedMap.Entry<Long, byte[]> receivePacket : storedFile.entrySet()) {
 
@@ -132,9 +211,14 @@ public class Server {
 								for (byte character : writeOut) {
 									outfile.write(character);
 								}
+								float progress = packetNumber * 20 / totalPackets;
+								if (Math.floor(progress) != lastPercentage) {
+									System.out.println("Upload " + (int)(progress * 5) + "% complete.");
+									lastPercentage = (int)Math.floor(progress);
+								}
 							}
 
-							System.out.println("Finished writing " + filename + " to server.");
+							System.out.println("Finished uploading " + filename + " to server.");
 							
 							// close output file
 							outfile.close();
