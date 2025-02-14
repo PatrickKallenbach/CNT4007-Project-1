@@ -115,40 +115,43 @@ public class Client {
 								remainingFileLength -= packetSize;
 							}
 
-							// Create file to write new content to
-							FileOutputStream outfile = new FileOutputStream("newUploadTestFile.pptx");
-
-							// For each entry now held in storedFile, write to outfile
-							for (SortedMap.Entry<Long, byte[]> receivePacket : storedFile.entrySet()) {
-
-								// Create new bytebuffer with information from each packet
-								ByteBuffer receiveData = ByteBuffer.wrap(receivePacket.getValue());
-								long packetNumber = receiveData.getLong();
-								long totalPackets = receiveData.getLong();
-								int packetLength = (int)receiveData.getLong(); // important value from buffer, determines packet length
-
-								// Prepare array to write to file
-								byte[] writeOut = new byte[packetLength];
-								receiveData.get(writeOut, 0, packetLength);
-
-								// write character by character to outfile
-								for (byte character : writeOut) {
-									outfile.write(character);
-								}
+							// Send all values to server
+							for (SortedMap.Entry<Long, byte[]> sendPacket : storedFile.entrySet()) {
+								out.writeObject(sendPacket.getValue());
+								out.flush();
 							}
-
-							outfile.close();
-
+							// Send completion message to alert server of complete transfer
 							sendMessage("DONE");
-							
-							// upload command: Add file to the server
-								// loop through file and break into packets
-								// store packets in dictionary, map, something like that
-								// transfer packets one by one
-									// send packets containing length and progress of message as header
-						
+
+							// CHECK FOR MISSING PACKETS
+
+							// Receive message, either containes "OK" or list of missing packets
+							Object message = in.readObject();
+
+							// If message is not "OK"
+							while (!(message instanceof String)) {
+								// Store input as byte buffer and prepare long list
+								ByteBuffer missingPacketsBuffer = ByteBuffer.wrap((byte[])message);
+								List<Long> missingPackets = new ArrayList<>();
+
+								// Load long list with long ints
+								while (missingPacketsBuffer.hasRemaining()) {
+									missingPackets.add(missingPacketsBuffer.getLong());
+								}
+
+								// send missing packets again
+								for (long index : missingPackets) {
+									out.writeObject(storedFile.get(index));
+									out.flush();
+								}
+								// send new completion message when all missing packets are sent
+								sendMessage("DONE");
+
+								// listen again for missing packets or completion message
+								message = in.readObject();
+
+							}
 									
-							confirm = (String)in.readObject();
 							System.out.println("File uploaded.");
 							
 							out.flush();

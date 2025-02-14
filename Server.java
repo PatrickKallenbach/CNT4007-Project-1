@@ -41,7 +41,9 @@ public class Server {
 					String command = args[0];
 					String filename = args[1];
 
-					String confirm;
+					SortedMap<Long, byte[]> storedFile = new TreeMap<>();
+
+					String confirm = "";
 
 					// cases for different commands
 					switch (command) {
@@ -53,29 +55,92 @@ public class Server {
 							break;
 						case "UPLOAD":
 							sendMessage("OK");
+							
+							// run set to false when file is fully received
+							boolean run = true;
 
+							while (run) {
+								// prepare receiving message
+								Object message;
+								message = in.readObject();
+
+								// get total file length from within loop
+								long totalLength = -1;
+
+								while (message instanceof byte[]) {
+									// load packet buffer
+									ByteBuffer packetBuffer = ByteBuffer.wrap((byte[])message);
+
+									// get current packet number and total number of packets
+									long packetNumber = packetBuffer.getLong();
+									if (totalLength != -1) totalLength = packetBuffer.getLong();
+									
+									// place packet in storage map
+									storedFile.put(packetNumber, (byte[])message);
+									
+									// listen for new message
+									message = in.readObject();
+								}
+								
+								// prepare list of missing packets to report to client
+								List<Long> missedPackets = new ArrayList<>();
+
+								// add all missing packets reported from storage into array
+								for (long i = 0; i < totalLength; i++) {
+									if (!storedFile.containsKey(i)) {
+										missedPackets.add(i);
+									}
+								}
+
+								// If there are missing packets in the map
+								if (!missedPackets.isEmpty()) {
+									// Prepare byte buffer of packet ids
+									ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES * missedPackets.size());
+									for (Long value : missedPackets) {
+										buffer.putLong(value);
+									}
+									buffer.flip();
+
+									// send missing packets to client
+									out.writeObject(buffer.array());
+									out.flush();
+								}
+								else { // if no missing packets in file
+									run = false;
+									sendMessage("OK"); // report full reception of file to client
+								}
+							}
 							System.out.println("Uploading file to server: " + filename);
 
-							confirm = (String)in.readObject();
+							// Create file to write new content to
+							FileOutputStream outfile = new FileOutputStream("newUploadTestFile.pptx");
 
-							sendMessage("OK");
+							// For each entry now held in storedFile, write to outfile
+							for (SortedMap.Entry<Long, byte[]> receivePacket : storedFile.entrySet()) {
+
+								// Create new bytebuffer with information from each packet
+								ByteBuffer receiveData = ByteBuffer.wrap(receivePacket.getValue());
+								long packetNumber = receiveData.getLong();
+								long totalPackets = receiveData.getLong();
+								int packetLength = (int)receiveData.getLong(); // important value from buffer, determines packet length
+
+								// Prepare array to write to file
+								byte[] writeOut = new byte[packetLength];
+								receiveData.get(writeOut, 0, packetLength);
+
+								// write character by character to outfile
+								for (byte character : writeOut) {
+									outfile.write(character);
+								}
+							}
+
+							System.out.println("Finished writing " + filename + " to server.");
+							
+							// close output file
+							outfile.close();
 
 							break;
-					}
-
-					//receive the message sent from the client
-
-					// confirm instruction: get or upload
-						// get: find data in map storage with filename key and retrieve
-						// upload: create new entry in map and begin receiving files
-
-					// get: send stored packets one by one across
-						// send "done" message to confirm file is finished sending
-						// if any requests for missing packets are returned, send each missing packet again
-
-					// upload: receive packets one by one and add to server database
-						// request missing files when receiving "done" message
-					
+					}					
 				}
 			}
 			catch(ClassNotFoundException classnot){
