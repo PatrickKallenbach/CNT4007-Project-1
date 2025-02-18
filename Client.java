@@ -55,65 +55,31 @@ public class Client {
 					switch (command) {
 						case "get":
 							sendMessage("GET " + filename);
-							
-							// run set to false when file is fully received
-							boolean run = true;
 
-							while (run) {
-								// prepare receiving message
-								Object message;
-								message = in.readObject();
+							// prepare receiving message
+							Object message;
+							message = in.readObject();
 
-								// get total file length from within loop
-								long totalLength = -1;
+							while (message instanceof byte[]) {
+								// load packet buffer
+								ByteBuffer packetBuffer = ByteBuffer.wrap((byte[])message);
 
-								while (message instanceof byte[]) {
-									// load packet buffer
-									ByteBuffer packetBuffer = ByteBuffer.wrap((byte[])message);
-
-									// get current packet number and total number of packets
-									long packetNumber = packetBuffer.getLong();
-									if (totalLength != -1) totalLength = packetBuffer.getLong();
-									
-									// place packet in storage map
-									storedFile.put(packetNumber, (byte[])message);
-									
-									// listen for new message
-									message = in.readObject();
-								}
+								// get current packet number and total number of packets
+								long packetNumber = packetBuffer.getLong();
 								
-								// prepare list of missing packets to report to client
-								List<Long> missedPackets = new ArrayList<>();
-
-								// add all missing packets reported from storage into array
-								for (long i = 0; i < totalLength; i++) {
-									if (!storedFile.containsKey(i)) {
-										missedPackets.add(i);
-									}
-								}
-
-								// If there are missing packets in the map
-								if (!missedPackets.isEmpty()) {
-									// Prepare byte buffer of packet ids
-									ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES * missedPackets.size());
-									for (Long value : missedPackets) {
-										buffer.putLong(value);
-									}
-									buffer.flip();
-
-									// send missing packets to server
-									out.writeObject(buffer.array());
-									out.flush();
-								}
-								else { // if no missing packets in file
-									run = false;
-									sendMessage("OK"); // report full reception of file to server
-								}
+								// place packet in storage map
+								storedFile.put(packetNumber, (byte[])message);
+								
+								// listen for new message
+								message = in.readObject();
 							}
+							
+							sendMessage("OK"); // report full reception of file to server
+							
 							System.out.println("Downloading file: " + filename);
 
 							// Create file to write new content to
-							FileOutputStream outfile = new FileOutputStream("newDownloadTestFile.pptx");
+							FileOutputStream outfile = new FileOutputStream("new" + filename.substring(0, 1).toUpperCase() + filename.substring(1));
 
 							int lastPercentage = 0; // used for displaying percentage downloaded
 
@@ -200,35 +166,6 @@ public class Client {
 							}
 							// Send completion message to alert server of complete transfer
 							sendMessage("DONE");
-
-							// CHECK FOR MISSING PACKETS
-
-							// Receive message, either containes "OK" or list of missing packets
-							Object message = in.readObject();
-
-							// If message is not "OK"
-							while (!(message instanceof String)) {
-								// Store input as byte buffer and prepare long list
-								ByteBuffer missingPacketsBuffer = ByteBuffer.wrap((byte[])message);
-								List<Long> missingPackets = new ArrayList<>();
-
-								// Load long list with long ints
-								while (missingPacketsBuffer.hasRemaining()) {
-									missingPackets.add(missingPacketsBuffer.getLong());
-								}
-
-								// send missing packets again
-								for (long index : missingPackets) {
-									out.writeObject(storedFile.get(index));
-									out.flush();
-								}
-								// send new completion message when all missing packets are sent
-								sendMessage("DONE");
-
-								// listen again for missing packets or completion message
-								message = in.readObject();
-
-							}
 									
 							confirm = (String)in.readObject();
 							System.out.println("File uploaded.");
@@ -239,14 +176,8 @@ public class Client {
 						default:
 							System.out.println("Unknown request. Please use \"get <filename>\" or \"upload <filename>\"");
 					}
-					
-					// Implement get and upload functions
-						// send message with get or upload command, wait for response before continuing
-							// get: send request message to server with file name, wait for response
-							// upload: send request message to server, wait for response
-
-					}
 				}
+			}
 		}
 		catch (ConnectException e) {
     			System.err.println("Connection refused. You need to initiate a server first.");
