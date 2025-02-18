@@ -207,10 +207,10 @@ public class Server {
 								byte[] writeOut = new byte[packetLength];
 								receiveData.get(writeOut, 0, packetLength);
 
-								// write character by character to outfile
-								for (byte character : writeOut) {
-									outfile.write(character);
-								}
+								// Write to file
+								outfile.getChannel().write(ByteBuffer.wrap(writeOut));
+
+								// Track progress in increments of 5%
 								float progress = packetNumber * 20 / totalPackets;
 								if (Math.floor(progress) != lastPercentage) {
 									System.out.println("Upload " + (int)(progress * 5) + "% complete.");
