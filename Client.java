@@ -8,7 +8,7 @@ import java.util.*;
 
 // Patrick Kallenbach - CNT4007 Project 1
 
-public class Client {
+public class client {
 	Socket requestSocket;           //socket connect to the server
 	ObjectOutputStream out;         //stream write to the socket
  	ObjectInputStream in;          //stream read from the socket
@@ -16,7 +16,7 @@ public class Client {
 	
 	int packetSize = 1000;
 
-	public void Client() {}
+	public void client() {}
 
 	void run()
 	{
@@ -219,7 +219,7 @@ public class Client {
 	//main method
 	public static void main(String args[])
 	{
-		Client client = new Client();
+		client client = new client();
 		client.run();
 	}
 

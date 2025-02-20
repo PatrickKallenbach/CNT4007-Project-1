@@ -6,7 +6,7 @@ import java.util.*;
 
 // Patrick Kallenbach - CNT4007 Project 1
 
-public class Server {
+public class server {
 	int sPort = 8000;    //The server will be listening on this port number
 	ServerSocket sSocket;   //serversocket used to lisen on port number 8000
 	Socket connection = null; //socket for the connection with the client
@@ -16,7 +16,7 @@ public class Server {
 
 	int packetSize = 1000;
 
-    public void Server() {}
+    public void server() {}
 
 	void run()
 	{
@@ -197,7 +197,7 @@ public class Server {
 		}
 	}
 	public static void main(String args[]) {
-		Server s = new Server();
+		server s = new server();
 		s.run();  
 
 	}
