@@ -15,15 +15,18 @@ public class client {
 	String request;                //User request (get, upload)
 	
 	int packetSize = 1000;
+	int port;
 
-	public void client() {}
+	public client(int port) {
+		this.port = port;
+	}
 
 	void run()
 	{
 		try{
 			//create a socket to connect to the server
-			requestSocket = new Socket("localhost", 8000);
-			System.out.println("Connected to localhost in port 8000");
+			requestSocket = new Socket("localhost", port);
+			System.out.println("Connected to localhost in port " + port);
 			//initialize inputStream and outputStream
 			out = new ObjectOutputStream(requestSocket.getOutputStream());
 			out.flush();
@@ -219,7 +222,13 @@ public class client {
 	//main method
 	public static void main(String args[])
 	{
-		client client = new client();
+		int port = 5106;
+		try {
+			port = Integer.parseInt(args[0]);
+		}
+		catch (Exception exception) {
+		} 
+		client client = new client(port);
 		client.run();
 	}
 

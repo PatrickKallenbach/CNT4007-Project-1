@@ -7,8 +7,8 @@ import java.util.*;
 // Patrick Kallenbach - CNT4007 Project 1
 
 public class server {
-	int sPort = 8000;    //The server will be listening on this port number
-	ServerSocket sSocket;   //serversocket used to lisen on port number 8000
+	int sPort = 5106;    //The server will be listening on this port number
+	ServerSocket sSocket;   //serversocket used to lisen on port number 5106
 	Socket connection = null; //socket for the connection with the client
 	String request;                //User request (get, upload)
 	ObjectOutputStream out;  //stream write to the socket
